@@ -1,8 +1,8 @@
 # Radar Target Generation and Detection (2D CA-CFAR)
 
 This project implements 2D [CA-CFAR](https://en.wikipedia.org/wiki/Constant_false_alarm_rate)
-(Cell-Averaging Constant False Alarm Rate) to detect Radar target measurements against
-a noisy background.
+(Cell-Averaging Constant False Alarm Rate) to detect target measurements against
+a noisy background for a frequency modulated continuous-wave (FMCW) radar.
 
 ---
 
