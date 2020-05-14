@@ -38,7 +38,8 @@ str_factor = 5.5;                       % sweep-to-roundtrip factor,
 
 Bsweep = c/(2*range_resolution);        % Hz, bandwidth
 Tchirp = str_factor * 2 * max_range/c;  % s, chirp time
-slope = Bsweep/Tchirp;                  % Hz/s
+slope = Bsweep/Tchirp                   % Hz/s
+
 
 %Operating carrier frequency of Radar 
 fc = radar_frequency;
@@ -112,6 +113,8 @@ sig_fft = abs(sig_fft);
 % one side of the spectrum. Hence we throw out half of the samples.
 sig_fft = sig_fft( 1:(Nr/2) );
 
+[val, idx] = max(sig_fft);
+estimated_distance_to_target = idx
 
 % Plotting the range
 figure('Name', 'Range from First FFT')
