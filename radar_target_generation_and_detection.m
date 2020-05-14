@@ -22,7 +22,7 @@ c = 3e8;                            % m/s (speed of light)
 % Note: Velocity remains contant.
 
 x0 = 100;                           % m, cannot exceed 200m
-v0 = 0;                             % m/s, range -70 .. 70 m/s
+v0 = 37;                            % m/s, range -70 .. 70 m/s
 
 
 %% FMCW Waveform Generation
@@ -69,28 +69,28 @@ td  = zeros(1, length(t));
 %% Signal generation and Moving Target simulation
 % Running the radar scenario over the time. 
 
-for i=1:length(t)         
+for d=1:length(t)         
     
     % For each time step, update the Range of the Target
     % for constant velocity. 
-    r_t(i) = x0 + v0*t(i);          % range covered
-    td(i)  =  2 * r_t(i)/c;         % time delay
+    r_t(d) = x0 + v0*t(d);          % range covered
+    td(d)  =  2 * r_t(d)/c;         % time delay
     
     % For each time step we need update the transmitted and
     % received signal. 
-    t_tx = t(i);
-    t_rx = t(i) - td(i);
+    t_tx = t(d);
+    t_rx = t(d) - td(d);
     
     tx_phase = 2*pi*( fc*t_tx + 0.5*slope*t_tx^2 );   % unit-less
     rx_phase = 2*pi*( fc*t_rx + 0.5*slope*t_rx^2 );   % unit-less
     
-    Tx(i) = cos(tx_phase);
-    Rx(i) = cos(rx_phase);
+    Tx(d) = cos(tx_phase);
+    Rx(d) = cos(rx_phase);
     
     % Now by mixing the Transmit and Receive generate the beat signal
     % This is done by element wise matrix multiplication of Transmit and
     % Receiver Signal
-    Mix(i) = Tx(i) .* Rx(i);
+    Mix(d) = Tx(d) .* Rx(d);
     
 end
 
@@ -150,69 +150,118 @@ RDM = 10*log10(RDM);
 % Use the surf function to plot the output of 2DFFT and to show axis
 % in both dimensions.
 doppler_axis = linspace(-100,100,Nd);
-range_axis = linspace(-200,200,Nr/2)*((Nr/2)/400);
+range_axis   = linspace(-200,200,Nr/2)*((Nr/2)/400);
 
 figure;
 surf(doppler_axis, range_axis, RDM);
 
 %% CFAR implementation
 
-%Slide Window through the complete Range Doppler Map
+% Slide Window through the complete Range Doppler Map
 
-% *%TODO* :
-%Select the number of Training Cells in both the dimensions.
+% Select the number of Training Cells in both the dimensions.
+Tr = 8;
+Td = 4;
 
-% *%TODO* :
-%Select the number of Guard Cells in both dimensions around the Cell under 
-%test (CUT) for accurate estimation
+% Select the number of Guard Cells in both dimensions around the Cell
+% under test (CUT) for accurate estimation
+Gr = 4;
+Gd = 2;
 
-% *%TODO* :
-% offset the threshold by SNR value in dB
+% Offset the threshold by SNR value in dB
+offset = 8;
 
-% *%TODO* :
 %Create a vector to store noise_level for each iteration on training cells
-noise_level = zeros(1,1);
+radius_doppler   = Td + Gd;  % no. of doppler cells on either side of CUT
+radius_range     = Tr + Gr;  % no. of range cells on either side of CUT
+
+Nrange_cells     = Nr/2 - 2*radius_doppler; % no. of range dimension cells
+Ndoppler_cells   = Nd   - 2*radius_range;   % no. of doppler dim. cells
+
+grid_size        = (2*Tr + 2*Gr + 1) * (2*Td + 2*Gd + 1);
+Nguard_cut_cells = (2*Gr+1) * (2*Gd+1);     % no. guards + cell-under-test
+Ntrain_cells     = grid_size - Nguard_cut_cells;  % no. of training cells
+
+noise_level      = zeros(Nrange_cells, Ndoppler_cells);
+
+% Design a loop such that it slides the CUT across range doppler map by
+% giving margins at the edges for Training and Guard Cells.
+%
+% For every iteration sum the signal level within all the training
+% cells. To sum convert the value from logarithmic to linear using db2pow
+% function. Average the summed values for all of the training
+% cells used. After averaging convert it back to logarithmic using pow2db.
+%
+% Further add the offset to it to determine the threshold. Next, compare the
+% signal under CUT with this threshold. If the CUT level > threshold assign
+% it a value of 1, else equate it to 0.
+
+% Use RDM[x,y] as the matrix from the output of 2D FFT for 
+% implementing CFAR.
+cfar_signal = zeros(size(RDM));
+
+r_min = radius_range + 1;
+r_max = Nrange_cells - radius_range;
+
+d_min = radius_doppler + 1;
+d_max = Ndoppler_cells - radius_doppler;
+
+for r = r_min : r_max
+    for d = d_min : d_max
+        cell_under_test = RDM(r, d);
+        
+        cell_count = 0;
+        for delta_r = -radius_range : radius_range
+            for delta_d = -radius_doppler : radius_doppler
+                
+                cr = r + delta_r;
+                cd = d + delta_d;
+                
+                if (cr >= 1) && (cd >= 1) && (cr < Nrange_cells) && (cd < Ndoppler_cells)
+                    noise = db2pow(RDM(cr, cd));
+                    noise_level(r, d) = noise_level(r, d) + noise;
+                    cell_count = cell_count + 1;
+                end
+               
+            end
+        end
+
+        % If the signal in the cell under test (CUT) exceeds the
+        % threshold, we mark the cell as hot by setting it to 1.
+        % We don't need to set it to zero, since the array
+        % is already zeroed out.
+        threshold = pow2db(noise_level(r, d) / cell_count) + offset;
+
+        if (cell_under_test >= threshold)
+            cfar_signal(r, d) = RDM(r, d); % ... or set to 1
+        end
+        
+    end
+end
 
 
-% *%TODO* :
-%design a loop such that it slides the CUT across range doppler map by
-%giving margins at the edges for Training and Guard Cells.
-%For every iteration sum the signal level within all the training
-%cells. To sum convert the value from logarithmic to linear using db2pow
-%function. Average the summed values for all of the training
-%cells used. After averaging convert it back to logarithimic using pow2db.
-%Further add the offset to it to determine the threshold. Next, compare the
-%signal under CUT with this threshold. If the CUT level > threshold assign
-%it a value of 1, else equate it to 0.
 
-
-   % Use RDM[x,y] as the matrix from the output of 2D FFT for implementing
-   % CFAR
-
-
-
-
-
-% *%TODO* :
-% The process above will generate a thresholded block, which is smaller 
-%than the Range Doppler Map as the CUT cannot be located at the edges of
-%matrix. Hence,few cells will not be thresholded. To keep the map size same
-% set those values to 0. 
- 
-
-
-
-
-
-
-
-
-% *%TODO* :
-%display the CFAR output using the Surf function like we did for Range
-%Doppler Response output.
-figure,surf(doppler_axis,range_axis,'replace this with output');
+% Display the CFAR output using the Surf function like we did for Range
+% Doppler Response output.
+figure('Name', 'CA-CFAR Filtered RDM');
+ax1 = subplot(1, 2, 1);
+surfc(doppler_axis, range_axis, RDM, 'LineStyle', 'none');
+alpha 0.75;
+zlim([0 50]);
+xlabel('velocity [m/s]');
+ylabel('range [m]');
+zlabel('signal strength [dB]')
+title('Range Doppler Response')
 colorbar;
 
+ax2 = subplot(1, 2, 2);
+surf(doppler_axis, range_axis, cfar_signal, 'LineStyle', 'none');
+alpha 0.75;
+grid minor;
+zlim([0, 50]);
+xlabel('velocity [m/s]');
+ylabel('range [m]');
+zlabel('signal strength [dB]')
+title(sprintf('CA-CFAR filtered Range Doppler Response (threshold=%d dB)', offset))
 
- 
- 
+linkprop([ax1, ax2],{'CameraUpVector', 'CameraPosition', 'CameraTarget', 'XLim', 'YLim', 'ZLim'});
