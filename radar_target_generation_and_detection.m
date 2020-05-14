@@ -78,9 +78,14 @@ for i=1:length(t)
     
     % For each time step we need update the transmitted and
     % received signal. 
+    t_tx = t(i);
+    t_rx = t(i) - td(i);
     
-    Tx(i) = cos(2*pi*( fc* t(i)        + 0.5* slope* t(i)^2 ));
-    Rx(i) = cos(2*pi*( fc*(t(i)-td(i)) + 0.5*(slope*(t(i)-td(i))^2) ));
+    tx_phase = 2*pi*( fc*t_tx + 0.5*slope*t_tx^2 );   % unit-less
+    rx_phase = 2*pi*( fc*t_rx + 0.5*slope*t_rx^2 );   % unit-less
+    
+    Tx(i) = cos(tx_phase);
+    Rx(i) = cos(rx_phase);
     
     % Now by mixing the Transmit and Receive generate the beat signal
     % This is done by element wise matrix multiplication of Transmit and
@@ -92,38 +97,37 @@ end
 %% RANGE MEASUREMENT
 
 
- % *%TODO* :
-%reshape the vector into Nr*Nd array. Nr and Nd here would also define the size of
-%Range and Doppler FFT respectively.
+% Reshape the vector into Nr*Nd array. Nr and Nd here would also define
+% the size of Range and Doppler FFT respectively.
+Mix = reshape(Mix, [Nr, Nd]);
 
- % *%TODO* :
-%run the FFT on the beat signal along the range bins dimension (Nr) and
-%normalize.
+% Run the FFT on the beat signal along the range bins dimension (Nr)
+% and normalize.
+sig_fft = fft(Mix, Nr) ./ length(Mix);
 
- % *%TODO* :
 % Take the absolute value of FFT output
+sig_fft = abs(sig_fft);
 
- % *%TODO* :
-% Output of FFT is double sided signal, but we are interested in only one side of the spectrum.
-% Hence we throw out half of the samples.
-
-
-%plotting the range
-figure ('Name','Range from First FFT')
-subplot(2,1,1)
-
- % *%TODO* :
- % plot FFT output 
-
- 
-axis ([0 200 0 1]);
+% Output of FFT is double sided signal, but we are interested in only
+% one side of the spectrum. Hence we throw out half of the samples.
+sig_fft = sig_fft( 1:(Nr/2) );
 
 
+% Plotting the range
+figure('Name', 'Range from First FFT')
+
+% Plot FFT output 
+plot(sig_fft); 
+axis([0, 200, 0, 1]);
+ylim([0, 0.5])
+grid minor;
+xlabel('measured range [m]');
+ylabel('amplitude');                % TODO: Get physical ... needs a unit.
 
 %% RANGE DOPPLER RESPONSE
 % The 2D FFT implementation is already provided here. This will run a 2DFFT
 % on the mixed signal (beat signal) output and generate a range doppler
-% map.You will implement CFAR on the generated RDM
+% map. You will implement CFAR on the generated RDM.
 
 
 % Range Doppler Map Generation.
@@ -132,22 +136,24 @@ axis ([0 200 0 1]);
 % doppler FFT bins. So, it is important to convert the axis from bin sizes
 % to range and doppler based on their Max values.
 
-Mix=reshape(Mix,[Nr,Nd]);
+Mix = reshape(Mix, [Nr, Nd]);
 
 % 2D FFT using the FFT size for both dimensions.
-sig_fft2 = fft2(Mix,Nr,Nd);
+sig_fft2 = fft2(Mix, Nr, Nd);
 
 % Taking just one side of signal from Range dimension.
 sig_fft2 = sig_fft2(1:Nr/2,1:Nd);
-sig_fft2 = fftshift (sig_fft2);
+sig_fft2 = fftshift(sig_fft2);
 RDM = abs(sig_fft2);
-RDM = 10*log10(RDM) ;
+RDM = 10*log10(RDM);
 
-%use the surf function to plot the output of 2DFFT and to show axis in both
-%dimensions
+% Use the surf function to plot the output of 2DFFT and to show axis
+% in both dimensions.
 doppler_axis = linspace(-100,100,Nd);
 range_axis = linspace(-200,200,Nr/2)*((Nr/2)/400);
-figure,surf(doppler_axis,range_axis,RDM);
+
+figure;
+surf(doppler_axis, range_axis, RDM);
 
 %% CFAR implementation
 

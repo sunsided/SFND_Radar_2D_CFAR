@@ -40,9 +40,9 @@ a noisy background for a frequency modulated continuous-wave (FMCW) radar.
 >   ```
 >   Slope=Bandwidth/T_chirp
 >   ```
-​
-#### Initial Range and velocity of the Target
-
+>
+> #### Initial Range and velocity of the Target
+>
 > You will provide the initial range and velocity of the target.
 > Range cannot exceed the max value of 200m and velocity can be
 > any value in the range of -70 to + 70 m/s.
