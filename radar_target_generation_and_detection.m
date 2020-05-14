@@ -1,4 +1,5 @@
 clear variables global;
+close all;
 clc;
 
 %% Radar Specifications 
@@ -20,8 +21,8 @@ c = 3e8;                            % m/s (speed of light)
 % Define the target's initial position and velocity. 
 % Note: Velocity remains contant.
 
-target_range = 100;                 % m, cannot exceed 200m
-target_velocity = 0;                % m/s, range -70 .. 70 m/s
+x0 = 100;                           % m, cannot exceed 200m
+v0 = 0;                             % m/s, range -70 .. 70 m/s
 
 
 %% FMCW Waveform Generation
@@ -30,7 +31,10 @@ target_velocity = 0;                % m/s, range -70 .. 70 m/s
 % Calculate the Bandwidth (B), Chirp Time (Tchirp) and Slope (slope) 
 % of the FMCW chirp using the requirements above.
 
-str_factor = 5.5;                       % given by project description
+str_factor = 5.5;                       % sweep-to-roundtrip factor,
+                                        % given by project description
+                                        % as a typical value for an
+                                        % FMCW radar system.
 
 Bsweep = c/(2*range_resolution);        % Hz, bandwidth
 Tchirp = str_factor * 2 * max_range/c;  % s, chirp time
@@ -39,8 +43,8 @@ slope = Bsweep/Tchirp;                  % Hz/s
 %Operating carrier frequency of Radar 
 fc = radar_frequency;
                                                           
-%The number of chirps in one sequence. Its ideal to have 2^ value for the ease of running the FFT
-%for Doppler Estimation. 
+%The number of chirps in one sequence. Its ideal to have 2^ value for 
+% the ease of running the FFT for Doppler Estimation. 
 Nd = 128;                           % #of doppler cells OR 
                                     % #of sent periods % number of chirps
 
@@ -53,13 +57,13 @@ t = linspace(0, Nd*Tchirp, Nr*Nd);  % total time for samples
 
 
 %Creating the vectors for Tx, Rx and Mix based on the total samples input.
-Tx = zeros(1, length(t));           % transmitted signal
-Rx = zeros(1, length(t));           % received signal
+Tx  = zeros(1, length(t));          % transmitted signal
+Rx  = zeros(1, length(t));          % received signal
 Mix = zeros(1, length(t));          % beat signal
 
 %Similar vectors for range_covered and time delay.
 r_t = zeros(1, length(t));
-td = zeros(1, length(t));
+td  = zeros(1, length(t));
 
 
 %% Signal generation and Moving Target simulation
@@ -67,21 +71,21 @@ td = zeros(1, length(t));
 
 for i=1:length(t)         
     
+    % For each time step, update the Range of the Target
+    % for constant velocity. 
+    r_t(i) = x0 + v0*t(i);          % range covered
+    td(i)  =  2 * r_t(i)/c;         % time delay
     
-    % *%TODO* :
-    %For each time stamp update the Range of the Target for constant velocity. 
+    % For each time step we need update the transmitted and
+    % received signal. 
     
-    % *%TODO* :
-    %For each time sample we need update the transmitted and
-    %received signal. 
-    Tx(i) = 
-    Rx (i)  =
+    Tx(i) = cos(2*pi*( fc* t(i)        + 0.5* slope* t(i)^2 ));
+    Rx(i) = cos(2*pi*( fc*(t(i)-td(i)) + 0.5*(slope*(t(i)-td(i))^2) ));
     
-    % *%TODO* :
-    %Now by mixing the Transmit and Receive generate the beat signal
-    %This is done by element wise matrix multiplication of Transmit and
-    %Receiver Signal
-    Mix(i) = 
+    % Now by mixing the Transmit and Receive generate the beat signal
+    % This is done by element wise matrix multiplication of Transmit and
+    % Receiver Signal
+    Mix(i) = Tx(i) .* Rx(i);
     
 end
 
