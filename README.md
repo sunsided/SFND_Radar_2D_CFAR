@@ -4,6 +4,13 @@ This project implements 2D [CA-CFAR](https://en.wikipedia.org/wiki/Constant_fals
 (Cell-Averaging Constant False Alarm Rate) to detect target measurements against
 a noisy background for a frequency modulated continuous-wave (FMCW) radar.
 
+The following picture shows a FMCW measurement of a target at 100 m distance
+with a velocity of 37 m/s. The left plot shows the noisy measurement obtained
+from the frequency mixer, whereas the right plot shows the CA-CFAR filtered
+Radar response.
+
+![](.readme/ca-cfar.png)
+
 ---
 
 ## Project Overview
@@ -154,3 +161,13 @@ a FMCW waveform. Find its Bandwidth (B), chirp time (Tchirp) and slope of the ch
   - Steps taken to suppress the non-thresholded cells at the edges.
 
 ---
+
+As already shown in the very beginning of this README, this plot depicts
+both the immediate response including noise on the left, as well as the CA-CFAR
+filtered response on the right where every value below threshold was suppressed.
+
+![](.readme/ca-cfar.png)
+
+Here's the same scenario in a top view:
+
+![](.readme/ca-cfar-top.png)
