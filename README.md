@@ -23,6 +23,8 @@ Radar response.
 > - Perform Range FFT on the received signal to determine the Range
 > - Towards the end, perform the CFAR processing on the output of 2nd FFT to display the target.
 
+<details>
+
 ### Radar System Requirements
 
 > The sensor fusion design for different
@@ -161,6 +163,8 @@ a FMCW waveform. Find its Bandwidth (B), chirp time (Tchirp) and slope of the ch
   - Steps taken to suppress the non-thresholded cells at the edges.
 
 ---
+
+</details>
 
 ## Project Implementation
 
