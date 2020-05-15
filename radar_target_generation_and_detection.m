@@ -36,8 +36,8 @@ str_factor = 5.5;                       % sweep-to-roundtrip factor,
                                         % as a typical value for an
                                         % FMCW radar system.
 
-Bsweep = c/(2*range_resolution);        % Hz, bandwidth
-Tchirp = str_factor * 2 * max_range/c;  % s, chirp time
+Bsweep = c/(2*range_resolution)         % Hz, bandwidth
+Tchirp = str_factor * 2 * max_range/c   % s, chirp time
 slope = Bsweep/Tchirp                   % Hz/s
 
 
@@ -164,12 +164,12 @@ surf(doppler_axis, range_axis, RDM);
 
 % Select the number of Training Cells in both the dimensions.
 Tr = 8;
-Td = 4;
+Td = 8;
 
 % Select the number of Guard Cells in both dimensions around the Cell
 % under test (CUT) for accurate estimation
 Gr = 4;
-Gd = 2;
+Gd = 8;
 
 % Offset the threshold by SNR value in dB
 offset = 8;
@@ -220,7 +220,10 @@ for r = r_min : r_max
                 cr = r + delta_r;
                 cd = d + delta_d;
                 
-                if (cr >= 1) && (cd >= 1) && (cr < Nrange_cells) && (cd < Ndoppler_cells)
+                in_valid_range = (cr >= 1) && (cd >= 1) && (cr < Nrange_cells) && (cd < Ndoppler_cells);
+                in_train_cell = abs(delta_r) > Gr || abs(delta_d) > Gd;
+                
+                if in_valid_range && in_train_cell
                     noise = db2pow(RDM(cr, cd));
                     noise_level(r, d) = noise_level(r, d) + noise;
                     cell_count = cell_count + 1;
@@ -266,5 +269,6 @@ xlabel('velocity [m/s]');
 ylabel('range [m]');
 zlabel('signal strength [dB]')
 title(sprintf('CA-CFAR filtered Range Doppler Response (threshold=%d dB)', offset))
+colorbar;
 
 linkprop([ax1, ax2],{'CameraUpVector', 'CameraPosition', 'CameraTarget', 'XLim', 'YLim', 'ZLim'});

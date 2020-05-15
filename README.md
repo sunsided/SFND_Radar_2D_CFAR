@@ -162,9 +162,68 @@ a FMCW waveform. Find its Bandwidth (B), chirp time (Tchirp) and slope of the ch
 
 ---
 
-As already shown in the very beginning of this README, this plot depicts
-both the immediate response including noise on the left, as well as the CA-CFAR
-filtered response on the right where every value below threshold was suppressed.
+## Project Implementation
+
+Given the specifications above and a sweep-to-roundtrip factor of 5.5 (given in the lectures
+as a typical value for an FMCW radar system), the following values were determined:
+
+- **Sweep bandwidth:** 150 MHz
+- **Chirp time:** 7.33 μs (7.3333e-06 s)
+- **Frequency drift / slope:** 20.45 THz/s (2.045e13 Hz/s)
+
+For the following simulation, a target was defined with the following parameters:
+
+- **Distance:** 100 m
+- **Velocity:** 37 m/s
+
+After simulating the beat signal was been for every time step, the Fourier transformation of it
+was taken in order to determine the distance to target. This resulted in a peak at
+
+- **Estimated distance:** 101 m
+
+Next, CA-CFAR was implemented as a march over each range/doppler cell (the cell-under-test, CUT),
+taking the integral of the training cells around it. The scan was limited to the extents of the
+CFAR signal storage array and normalization was done by the number of valid cells examined.
+Due to this procedure and since the CFAR signal array was initialized to zero, no edge suppression
+was required. If a signal were to be received in these edge areas however, we would have to expect
+slightly degraded results since a lower number of training cells is involved.
+
+In the next step, the mean noise level of the sampled cells was determined, converted from
+power to dB scale and compared against a threshold. Cells below threshold were suppressed, whereas
+cell values equal to or above threshold were kept. Note that this differs from the project description
+in that no further normalization is done here (specifically, good values are not simply set to one).
+Using the CFAR array as a multiplicative mask would be certainly possible with the approach
+described in the project, but the end result would be the same.
+
+Initially, the following setup was used by arbitrarily picking values from the lessons as defaults
+and determining a threshold by fair dice roll:
+
+- **Distance training cells:** 8
+- **Distance guard cells:** 4
+- **Doppler training cells:** 8
+- **Doppler training cells:** 4
+- **Threshold:** 4 dB
+
+This resulted in the following outcome:
+
+![](.readme/ca-cfar-too-low.png)
+
+As can be seen, the correct spike was kept, but is very wide along the velocity
+axis; in addition, a couple of false positives were kept as well.
+
+Since the estimate along the range axis was very sharp and spot on, the
+number of doppler training cells was increased to suppress velocity errors better.
+In addition, the threshold was increased to 8 dB, such that
+
+- **Distance training cells:** 8
+- **Distance guard cells:** 4
+- **Doppler training cells:** 8
+- **Doppler training cells:** 8
+- **Threshold:** 8 dB
+
+The result - as already shown in the very beginning of this README - is this plot.
+As can be seen, the spike at 100 m and 37 m / s is reasonably sharp, although the
+precision along the doppler / velocity axis could be better:
 
 ![](.readme/ca-cfar.png)
 
